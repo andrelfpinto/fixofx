@@ -32,7 +32,6 @@ sys.path.insert(0, fixpath('lib'))
 from datetime import date
 from datetime import timedelta
 import ofx
-from optparse import OptionParser
 import random
 
 def generate_amt(base_amt):
