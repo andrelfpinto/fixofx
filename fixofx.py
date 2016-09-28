@@ -48,190 +48,197 @@ you to insert data into the output file not available in the source file (for
 instance, QIF does not contain the account number, so an option allows you to
 specify that for insertion into the OFX output)."""
 
-# Import Psyco if available, for speed.
-try:
-    import psyco
-    psyco.full()
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv
 
-except ImportError:
-    pass
-
-
-def convert(text, filetype, verbose=False, fid="UNKNOWN", org="UNKNOWN", 
-            bankid="UNKNOWN", accttype="UNKNOWN", acctid="UNKNOWN",
-            balance="UNKNOWN", curdef=None, lang="ENG", dayfirst=False, 
-            debug=False):
+    # Import Psyco if available, for speed.
+    try:
+        import psyco
+        psyco.full()
     
-    # This finishes a verbosity message started by the caller, where the
-    # caller explains the source command-line option and this explains the
-    # source format.
-    if verbose: 
-        sys.stderr.write("Converting from %s format.\n" % filetype)
-
-    if options.debug and (filetype in ["OFC", "QIF"] or filetype.startswith("OFX")):
-        sys.stderr.write("Starting work on raw text:\n")
-        sys.stderr.write(rawtext + "\n\n")
+    except ImportError:
+        pass
     
-    if filetype.startswith("OFX/2"):
-        if verbose: sys.stderr.write("No conversion needed; returning unmodified.\n")
+    
+    def convert(text, filetype, verbose=False, fid="UNKNOWN", org="UNKNOWN", 
+                bankid="UNKNOWN", accttype="UNKNOWN", acctid="UNKNOWN",
+                balance="UNKNOWN", curdef=None, lang="ENG", dayfirst=False, 
+                debug=False):
         
-        # The file is already OFX 2 -- return it unaltered, ignoring
-        # any of the parameters passed to this method.
-        return text
-    
-    elif filetype.startswith("OFX"):
-        if verbose: sys.stderr.write("Converting to OFX/2.0...\n")
-        
-        # This will throw a ParseException if it is unable to recognize
-        # the source format.
-        response = ofx.Response(text, debug=debug)        
-        return response.as_xml(original_format=filetype)
-    
-    elif filetype == "OFC":
-        if verbose: sys.stderr.write("Beginning OFC conversion...\n")
-        converter = ofxtools.OfcConverter(text, fid=fid, org=org, curdef=curdef,
-                                          lang=lang, debug=debug)
-        
-        # This will throw a ParseException if it is unable to recognize
-        # the source format.
+        # This finishes a verbosity message started by the caller, where the
+        # caller explains the source command-line option and this explains the
+        # source format.
         if verbose: 
-            sys.stderr.write("Converting to OFX/1.02...\n\n%s\n\n" %
-                             converter.to_ofx102())
-            sys.stderr.write("Converting to OFX/2.0...\n")
-                                             
-        return converter.to_xml()
+            sys.stderr.write("Converting from %s format.\n" % filetype)
     
-    elif filetype == "QIF":
-        if verbose: sys.stderr.write("Beginning QIF conversion...\n")
-        converter = ofxtools.QifConverter(text, fid=fid, org=org,
-                                          bankid=bankid, accttype=accttype, 
-                                          acctid=acctid, balance=balance, 
-                                          curdef=curdef, lang=lang, dayfirst=dayfirst,
-                                          debug=debug)
+        if options.debug and (filetype in ["OFC", "QIF"] or filetype.startswith("OFX")):
+            sys.stderr.write("Starting work on raw text:\n")
+            sys.stderr.write(rawtext + "\n\n")
         
-        # This will throw a ParseException if it is unable to recognize
-        # the source format.
-        if verbose: 
-            sys.stderr.write("Converting to OFX/1.02...\n\n%s\n\n" %
-                             converter.to_ofx102())
-            sys.stderr.write("Converting to OFX/2.0...\n")
-                                             
-        return converter.to_xml()
+        if filetype.startswith("OFX/2"):
+            if verbose: sys.stderr.write("No conversion needed; returning unmodified.\n")
+            
+            # The file is already OFX 2 -- return it unaltered, ignoring
+            # any of the parameters passed to this method.
+            return text
+        
+        elif filetype.startswith("OFX"):
+            if verbose: sys.stderr.write("Converting to OFX/2.0...\n")
+            
+            # This will throw a ParseException if it is unable to recognize
+            # the source format.
+            response = ofx.Response(text, debug=debug)        
+            return response.as_xml(original_format=filetype)
+        
+        elif filetype == "OFC":
+            if verbose: sys.stderr.write("Beginning OFC conversion...\n")
+            converter = ofxtools.OfcConverter(text, fid=fid, org=org, curdef=curdef,
+                                              lang=lang, debug=debug)
+            
+            # This will throw a ParseException if it is unable to recognize
+            # the source format.
+            if verbose: 
+                sys.stderr.write("Converting to OFX/1.02...\n\n%s\n\n" %
+                                 converter.to_ofx102())
+                sys.stderr.write("Converting to OFX/2.0...\n")
+                                                 
+            return converter.to_xml()
+        
+        elif filetype == "QIF":
+            if verbose: sys.stderr.write("Beginning QIF conversion...\n")
+            converter = ofxtools.QifConverter(text, fid=fid, org=org,
+                                              bankid=bankid, accttype=accttype, 
+                                              acctid=acctid, balance=balance, 
+                                              curdef=curdef, lang=lang, dayfirst=dayfirst,
+                                              debug=debug)
+            
+            # This will throw a ParseException if it is unable to recognize
+            # the source format.
+            if verbose: 
+                sys.stderr.write("Converting to OFX/1.02...\n\n%s\n\n" %
+                                 converter.to_ofx102())
+                sys.stderr.write("Converting to OFX/2.0...\n")
+                                                 
+            return converter.to_xml()
+        
+        else:
+            raise TypeError("Unable to convert source format '%s'." % filetype)
+    
+    parser = OptionParser(description=__doc__)
+    parser.add_option("-d", "--debug", action="store_true", dest="debug",
+                      default=False, help="spit out gobs of debugging output during parse")
+    parser.add_option("-v", "--verbose", action="store_true", dest="verbose",
+                      default=False, help="be more talkative, social, outgoing")
+    parser.add_option("-t", "--type", action="store_true", dest="type",
+                      default=False, help="print input file type and exit")
+    parser.add_option("-f", "--file", dest="filename", default=None,
+                      help="source file to convert (writes to STDOUT)")
+    parser.add_option("--fid", dest="fid", default="UNKNOWN",
+                      help="(OFC/QIF only) FID to use in output")
+    parser.add_option("--org", dest="org", default="UNKNOWN",
+                      help="(OFC/QIF only) ORG to use in output")
+    parser.add_option("--curdef", dest="curdef", default=None,
+                      help="(OFC/QIF only) Currency identifier to use in output")
+    parser.add_option("--lang", dest="lang", default="ENG",
+                      help="(OFC/QIF only) Language identifier to use in output")
+    parser.add_option("--bankid", dest="bankid", default="UNKNOWN",
+                      help="(QIF only) Routing number to use in output")
+    parser.add_option("--accttype", dest="accttype", default="UNKNOWN",
+                      help="(QIF only) Account type to use in output")
+    parser.add_option("--acctid", dest="acctid", default="UNKNOWN",
+                      help="(QIF only) Account number to use in output")
+    parser.add_option("--balance", dest="balance", default="UNKNOWN",
+                      help="(QIF only) Account balance to use in output")
+    parser.add_option("--dayfirst", action="store_true", dest="dayfirst", default=False,
+                      help="(QIF only) Parse dates day first (UK format)")
+    (options, args) = parser.parse_args(argv)
+    
+    #
+    # Check the python environment for minimum sanity levels.
+    #
+    
+    if options.verbose and not hasattr(open, 'newlines'):
+        # Universal newlines are generally needed to deal with various QIF downloads.
+        sys.stderr.write('Warning: universal newline support NOT available.\n')
+    
+    if options.verbose: print "Options: %s" % options
+    
+    #
+    # Load up the raw text to be converted.
+    #
+    
+    rawtext = None
+    
+    if options.filename:
+        if os.path.isfile(options.filename):
+            if options.verbose: 
+                sys.stderr.write("Reading from '%s'\n." % options.filename)
+            
+            try:
+                srcfile = open(options.filename, 'rU')
+                rawtext = srcfile.read()
+                srcfile.close()
+            except StandardError, detail:
+                print "Exception during file read:\n%s" % detail
+                print "Exiting."
+                sys.stderr.write("fixofx failed with error code 1\n")
+                return 1
+            
+        else:
+            print "'%s' does not appear to be a file.  Try --help." % options.filename
+            sys.stderr.write("fixofx failed with error code 2\n")
+            return 2
     
     else:
-        raise TypeError("Unable to convert source format '%s'." % filetype)
-
-parser = OptionParser(description=__doc__)
-parser.add_option("-d", "--debug", action="store_true", dest="debug",
-                  default=False, help="spit out gobs of debugging output during parse")
-parser.add_option("-v", "--verbose", action="store_true", dest="verbose",
-                  default=False, help="be more talkative, social, outgoing")
-parser.add_option("-t", "--type", action="store_true", dest="type",
-                  default=False, help="print input file type and exit")
-parser.add_option("-f", "--file", dest="filename", default=None,
-                  help="source file to convert (writes to STDOUT)")
-parser.add_option("--fid", dest="fid", default="UNKNOWN",
-                  help="(OFC/QIF only) FID to use in output")
-parser.add_option("--org", dest="org", default="UNKNOWN",
-                  help="(OFC/QIF only) ORG to use in output")
-parser.add_option("--curdef", dest="curdef", default=None,
-                  help="(OFC/QIF only) Currency identifier to use in output")
-parser.add_option("--lang", dest="lang", default="ENG",
-                  help="(OFC/QIF only) Language identifier to use in output")
-parser.add_option("--bankid", dest="bankid", default="UNKNOWN",
-                  help="(QIF only) Routing number to use in output")
-parser.add_option("--accttype", dest="accttype", default="UNKNOWN",
-                  help="(QIF only) Account type to use in output")
-parser.add_option("--acctid", dest="acctid", default="UNKNOWN",
-                  help="(QIF only) Account number to use in output")
-parser.add_option("--balance", dest="balance", default="UNKNOWN",
-                  help="(QIF only) Account balance to use in output")
-parser.add_option("--dayfirst", action="store_true", dest="dayfirst", default=False,
-                  help="(QIF only) Parse dates day first (UK format)")
-(options, args) = parser.parse_args()
-
-#
-# Check the python environment for minimum sanity levels.
-#
-
-if options.verbose and not hasattr(open, 'newlines'):
-    # Universal newlines are generally needed to deal with various QIF downloads.
-    sys.stderr.write('Warning: universal newline support NOT available.\n')
-
-if options.verbose: print "Options: %s" % options
-
-#
-# Load up the raw text to be converted.
-#
-
-rawtext = None
-
-if options.filename:
-    if os.path.isfile(options.filename):
         if options.verbose: 
-            sys.stderr.write("Reading from '%s'\n." % options.filename)
+            sys.stderr.write("Reading from standard input.\n")
         
-        try:
-            srcfile = open(options.filename, 'rU')
-            rawtext = srcfile.read()
-            srcfile.close()
-        except StandardError, detail:
-            print "Exception during file read:\n%s" % detail
-            print "Exiting."
-            sys.stderr.write("fixofx failed with error code 1\n")
-            sys.exit(1)
+        stdin_universal = os.fdopen(os.dup(sys.stdin.fileno()), "rU")
+        rawtext = stdin_universal.read()
         
-    else:
-        print "'%s' does not appear to be a file.  Try --help." % options.filename
-        sys.stderr.write("fixofx failed with error code 2\n")
-        sys.exit(2)
-
-else:
-    if options.verbose: 
-        sys.stderr.write("Reading from standard input.\n")
+        if rawtext == "" or rawtext is None:
+            print "No input.  Pipe a file to convert to the script,\n" + \
+                  "or call with -f.  Call with --help for more info."
+            sys.stderr.write("fixofx failed with error code 3\n")
+            return 3
     
-    stdin_universal = os.fdopen(os.dup(sys.stdin.fileno()), "rU")
-    rawtext = stdin_universal.read()
+    #
+    # Convert the raw text to OFX 2.0.
+    #
     
-    if rawtext == "" or rawtext is None:
-        print "No input.  Pipe a file to convert to the script,\n" + \
-              "or call with -f.  Call with --help for more info."
-        sys.stderr.write("fixofx failed with error code 3\n")
-        sys.exit(3)
-
-#
-# Convert the raw text to OFX 2.0.
-#
-
-try:
-    # Determine the type of file contained in 'text', using a quick guess
-    # rather than parsing the file to make sure.  (Parsing will fail
-    # below if the guess is wrong on OFX/1 and QIF.)
-    filetype  = ofx.FileTyper(rawtext).trust()
+    try:
+        # Determine the type of file contained in 'text', using a quick guess
+        # rather than parsing the file to make sure.  (Parsing will fail
+        # below if the guess is wrong on OFX/1 and QIF.)
+        filetype  = ofx.FileTyper(rawtext).trust()
+        
+        if options.type:
+            print "Input file type is %s." % filetype
+            return 0
+        elif options.debug:
+            sys.stderr.write("Input file type is %s.\n" % filetype)
+        
+        converted = convert(rawtext, filetype, verbose=options.verbose, 
+                            fid=options.fid, org=options.org, bankid=options.bankid, 
+                            accttype=options.accttype, acctid=options.acctid, 
+                            balance=options.balance, curdef=options.curdef,
+                            lang=options.lang, dayfirst=options.dayfirst,
+                            debug=options.debug)
+        print converted
+        return 0
     
-    if options.type:
-        print "Input file type is %s." % filetype
-        sys.exit(0)
-    elif options.debug:
-        sys.stderr.write("Input file type is %s.\n" % filetype)
+    except ParseException, detail:
+        print "Parse exception during '%s' conversion:\n%s" % (filetype, detail)
+        print "Exiting."
+        sys.stderr.write("fixofx failed with error code 4\n")
+        return 4
     
-    converted = convert(rawtext, filetype, verbose=options.verbose, 
-                        fid=options.fid, org=options.org, bankid=options.bankid, 
-                        accttype=options.accttype, acctid=options.acctid, 
-                        balance=options.balance, curdef=options.curdef,
-                        lang=options.lang, dayfirst=options.dayfirst,
-                        debug=options.debug)
-    print converted
-    sys.exit(0)
+    except TypeError, detail:
+        print detail
+        print "Exiting."
+        sys.stderr.write("fixofx failed with error code 5\n")
+        return 5
 
-except ParseException, detail:
-    print "Parse exception during '%s' conversion:\n%s" % (filetype, detail)
-    print "Exiting."
-    sys.stderr.write("fixofx failed with error code 4\n")
-    sys.exit(4)
-
-except TypeError, detail:
-    print detail
-    print "Exiting."
-    sys.stderr.write("fixofx failed with error code 5\n")
-    sys.exit(5)
+if __name__ == "__main__":
+    sys.exit(main())
